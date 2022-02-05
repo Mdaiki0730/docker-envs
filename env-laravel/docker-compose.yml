@@ -1,0 +1,55 @@
+version: '3'
+services:
+  php-server:
+    build:
+      context: .
+      dockerfile: ./docker/php-server/Dockerfile
+    tty: true
+    working_dir: /var/www
+    volumes:
+      - ./src:/var/www
+    environment:
+      - "DB_PORT=3306"
+      - "DB_HOST=database"
+    networks:
+      - my-local
+  web:
+    image: nginx:alpine
+    tty: true
+    working_dir: /var/www
+    volumes:
+      - ./src:/var/www
+      - ./docker/nginx/sites-enabled/:/etc/nginx/conf.d/
+      - ./docker/nginx/snippets/:/etc/nginx/snippets/
+      - ./docker/nginx/logs:/var/log/nginx
+      - /etc/hosts:/etc/hosts
+    ports:
+      - ${WEB_PORT}:80
+    networks:
+      my-local:
+        aliases:
+          - myapp.local
+  database:
+    platform: linux/x86_64
+    image: mysql:5.7
+    volumes:
+      - ./docker/database/data:/var/lib/mysql/
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - ${MYSQL_LOCAL_PORT}:3306
+    networks:
+      - my-local
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    networks:
+      - my-local
+networks:
+  my-local:
+    driver: bridge
